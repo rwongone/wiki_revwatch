@@ -35,16 +35,13 @@ wiki_client.getRecentChanges(oneDayAgo(), function(changeResponse) {
 				format: 'json'
 			};
 
-			console.log(title);
-
 			wiki_client.api.call(revParams, function(revResponse) {
-				var pageId = Object.keys(revResponse.pages)[0];
-				
+				var pageId = Object.keys(revResponse.pages)[0];			
 				if (revResponse.pages[pageId].revisions) {
-					console.log(revResponse.pages);
+					console.log(this.title);
 					console.log(revResponse.pages[pageId].revisions.length);
 				}
-			});
+			}.bind( {title: title}));
 		}
 	}
 });
