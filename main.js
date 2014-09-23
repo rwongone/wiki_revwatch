@@ -7,15 +7,22 @@ var wiki_client = new wikibot({
 	debug: true,
 });
 
-function timeWeekAgo() {
-	return moment().subtract(7, 'days').format('YYYYMMDDhhmmss');
+function oneDayAgo() {
+	return moment().subtract(1, 'day').format('YYYYMMDDhhmmss');
 }
 
-wiki_client.getRecentChanges(timeWeekAgo, function(data) {
-	for (var i = 0; i < 1; i++) {
-		if (data[i].type == 'edit') {
-			var title = data[i].title;
-			console.log(title);
+function now() {
+	return moment().format('YYYYMMDDhhmmss');	
+}
+
+
+
+wiki_client.getRecentChanges(oneDayAgo(), function(changeResponse) {
+	for (var i = 0; i < 10; i++) {
+		if (!changeResponse[i]) {
+			break;
+		} else if (changeResponse[i].type == 'edit') {
+			var title = changeResponse[i].title;
 
 			var revParams = {
 				action: 'query',
@@ -23,16 +30,20 @@ wiki_client.getRecentChanges(timeWeekAgo, function(data) {
 				prop: 'revisions',
 				rvprop: 'user|flags',
 				rvlimit: 'max',
-				rvstart: timeWeekAgo,
+				rvstart: now(),
+				rvend: oneDayAgo(),
 				format: 'json'
 			};
 
-			
+			console.log(title);
 
-			wiki_client.api.call(revParams, function(response) {
-				console.log(response);
-				console.log(response.pages);
-				console.log(response.pages[0]);
+			wiki_client.api.call(revParams, function(revResponse) {
+				var pageId = Object.keys(revResponse.pages)[0];
+				
+				if (revResponse.pages[pageId].revisions) {
+					console.log(revResponse.pages);
+					console.log(revResponse.pages[pageId].revisions.length);
+				}
 			});
 		}
 	}
