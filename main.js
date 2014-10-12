@@ -10,10 +10,6 @@ var T = new Twit({
   , access_token_secret:  config.twitter.ACCESS_SECRET
 });
 
-T.post('statuses/update', { status: 'hello world!' }, function(err, data, response) {
-  console.log(data);
-});
-
 var wiki_client = new wikibot({
 	server: 'en.wikipedia.org',
 	path: '/w',
@@ -25,7 +21,7 @@ function oneDayAgo() {
 }
 
 function now() {
-	return moment().format('YYYYMMDDhhmmss');	
+	return moment().format('YYYYMMDDhhmmss');
 }
 
 function getRecentChange(i, max, maxRev, maxTitle, changeResponse) {
@@ -59,10 +55,25 @@ function getRecentChange(i, max, maxRev, maxTitle, changeResponse) {
 			getRecentChange(i + 1, max, maxRev, maxTitle, changeResponse);
 		}
 	} else {
-		console.log(maxTitle + " has been revised " + maxRev + " times in the past day.");
+		T.post('statuses/update', { status: maxTitle + " has been revised " + maxRev + " times in the past day." }, function(err, data, response) {
+		  console.log(data);
+		});
 	}
 }
 
-wiki_client.getRecentChanges(oneDayAgo(), function(changeResponse) {
-	getRecentChange(0, 100, 0, "n/a", changeResponse);
-});
+function mainLoop() {
+	var now = new Date();
+	var deltaT = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0) - now;
+	if (deltaT < 0) {
+	     deltaT += 86400000;
+	}
+	console.log(deltaT);
+	setTimeout(function(){
+		wiki_client.getRecentChanges(oneDayAgo(), function(changeResponse) {
+			getRecentChange(0, 100, 0, "n/a", changeResponse);
+		});
+		mainLoop();
+	}, deltaT);
+}
+
+mainLoop();
