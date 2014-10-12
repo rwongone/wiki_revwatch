@@ -1,5 +1,18 @@
+var config = require('./config');
 var wikibot = require('nodemw');
 var moment = require('moment');
+var Twit = require('twit');
+
+var T = new Twit({
+    consumer_key:         config.twitter.CONSUMER_KEY
+  , consumer_secret:      config.twitter.CONSUMER_SECRET
+  , access_token:         config.twitter.ACCESS_TOKEN
+  , access_token_secret:  config.twitter.ACCESS_SECRET
+});
+
+T.post('statuses/update', { status: 'hello world!' }, function(err, data, response) {
+  console.log(data);
+});
 
 var wiki_client = new wikibot({
 	server: 'en.wikipedia.org',
@@ -15,13 +28,9 @@ function now() {
 	return moment().format('YYYYMMDDhhmmss');	
 }
 
-
-
-wiki_client.getRecentChanges(oneDayAgo(), function(changeResponse) {
-	for (var i = 0; i < 10; i++) {
-		if (!changeResponse[i]) {
-			break;
-		} else if (changeResponse[i].type == 'edit') {
+function getRecentChange(i, max, maxRev, maxTitle, changeResponse) {
+	if (i < max) {
+		if (changeResponse[i] && changeResponse[i].type == 'edit') {
 			var title = changeResponse[i].title;
 
 			var revParams = {
@@ -36,12 +45,24 @@ wiki_client.getRecentChanges(oneDayAgo(), function(changeResponse) {
 			};
 
 			wiki_client.api.call(revParams, function(revResponse) {
-				var pageId = Object.keys(revResponse.pages)[0];			
-				if (revResponse.pages[pageId].revisions) {
-					console.log(this.title);
-					console.log(revResponse.pages[pageId].revisions.length);
+				var pageId = Object.keys(revResponse.pages)[0];		
+				var revObj = revResponse.pages[pageId].revisions;
+				if (revObj) {
+					if (revObj.length > maxRev) {
+						maxRev = revObj.length;
+						maxTitle = this.title;
+					}
 				}
+				getRecentChange(i + 1, max, maxRev, maxTitle, changeResponse);
 			}.bind( {title: title}));
+		} else {
+			getRecentChange(i + 1, max, maxRev, maxTitle, changeResponse);
 		}
+	} else {
+		console.log(maxTitle + " has been revised " + maxRev + " times in the past day.");
 	}
+}
+
+wiki_client.getRecentChanges(oneDayAgo(), function(changeResponse) {
+	getRecentChange(0, 100, 0, "n/a", changeResponse);
 });
